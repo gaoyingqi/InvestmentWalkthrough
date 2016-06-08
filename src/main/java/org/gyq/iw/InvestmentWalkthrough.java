@@ -1,5 +1,6 @@
 package org.gyq.iw;
 
+import org.gyq.iw.account.AccountMoney;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,16 +26,16 @@ public class InvestmentWalkthrough {
             String line = reader.readLine();
             while (line != null) {
                 String[] split = line.split(",");
-                if (split.length != 5) {
-                    LOGGER.error(lineNumber + "line is Incorrect");
-                } else {
+                if (split.length == 5) {
                     lineList.add(new OneLine(split[0], split[1], split[2], split[3], split[4]));
+                } else {
+                    LOGGER.error(lineNumber + "line is Incorrect");
                 }
                 line = reader.readLine();
                 lineNumber++;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("read file error", e);
         }
         LOGGER.info("read lines " + lineList.size());
 

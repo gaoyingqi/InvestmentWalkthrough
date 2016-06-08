@@ -7,11 +7,31 @@
     <groupId>org.gyq</groupId>
     <artifactId>InvestmentWalkthrough</artifactId>
     <version>1.0-SNAPSHOT</version>
+
+    <repositories>
+        <repository>
+            <id>codehausSnapshots</id>
+            <name>Codehaus Snapshots</name>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>warn</checksumPolicy>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+                <updatePolicy>never</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+            <url>http://snapshots.maven.codehaus.org/maven2</url>
+            <layout>default</layout>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
-            <version>[1.7.21,)</version>
+            <version>[1.7.21,2.0)</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>

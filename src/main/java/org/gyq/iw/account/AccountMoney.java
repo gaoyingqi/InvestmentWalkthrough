@@ -1,5 +1,6 @@
-package org.gyq.iw;
+package org.gyq.iw.account;
 
+import org.gyq.iw.util.BigDecimalUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,10 +8,11 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 
 /**
+ * 一个金融账户
  * Created by gyq on 2016/6/5.
  */
 public class AccountMoney {
-    private final static Logger LOGGER = LoggerFactory.getLogger(AccountMoney.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(AccountMoney.class.getName());
     private BigDecimal money;
     private BigDecimal lastBuyMoney;
     private BigDecimal lastSellMoney;
@@ -36,10 +38,10 @@ public class AccountMoney {
             lastBuyMoney = price;
             lastSellMoney = null;
             canBuy = false;
-            // LOGGER.info(accountId + " buy by price " + price.toPlainString());
+            LOGGER.debug("{} buy by price {}", accountId, price.toPlainString());
             return true;
         } else {
-            // LOGGER.info(accountId + " if full , by price " + price.toPlainString());
+            LOGGER.debug("{} if full , by price {}", accountId, price.toPlainString());
             return false;
         }
     }
@@ -50,15 +52,37 @@ public class AccountMoney {
      * @param price
      */
     public boolean sell(BigDecimal price) {
-        if (!canBuy) {
+        if (canBuy) {
+            LOGGER.debug("{} if empty , by price {}", accountId, price.toPlainString());
+            return false;
+        } else {
             lastSellMoney = price;
             canBuy = true;
-            //LOGGER.info(accountId + " sell by price " + price.toPlainString());
+            LOGGER.debug("{} sell by price {}", accountId, price.toPlainString());
             calculatingRevenue();
             return true;
-        } else {
-            //LOGGER.info(accountId + " if empty , by price " + price.toPlainString());
+        }
+    }
+
+    /**
+     * 全部卖出某个价格
+     *
+     * @param price   卖出价格
+     * @param percent 卖出百分比，相对于账户持有股票金额   （0,1]
+     */
+    public boolean sell(BigDecimal price, BigDecimal percent) {
+        if (percent == null || BigDecimalUtil.lessThan(percent, 0) || BigDecimalUtil.greaterThan(percent, 1)) {
+            throw new IllegalArgumentException("percent must be in (0,1]");
+        }
+        if (canBuy) {
+            LOGGER.debug("{} if empty , by price {}", accountId, price.toPlainString());
             return false;
+        } else {
+            lastSellMoney = price;
+            canBuy = true;
+            LOGGER.debug("{} sell by price {}", accountId, price.toPlainString());
+            calculatingRevenue();
+            return true;
         }
     }
 
