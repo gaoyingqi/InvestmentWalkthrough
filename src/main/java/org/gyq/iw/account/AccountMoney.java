@@ -93,16 +93,40 @@ public class AccountMoney {
         }
         if (hasBill()) {
             for (Bill bill : bills) {
-                TradingHistory tradingHistory = bill.sell(percent, time, price);
-                histories.add(tradingHistory);
-                this.remainderMoney = this.remainderMoney.add(tradingHistory.getSellPrice().multiply(new BigDecimal(tradingHistory.getSellCount())));
-                LOGGER.debug("sell {} by price {} count {}, earn remainderMoney {}", tradingHistory.getStockId(), this.numberFormat.format(tradingHistory.getSellPrice()), tradingHistory.getSellCount(), tradingHistory.getEarnMoney());
+                sellBillInner(price, percent, time, bill);
             }
             clearEmptyBill();
             return true;
         }
         return false;
     }
+
+    private void sellBillInner(BigDecimal price, BigDecimal percent, String time, Bill bill) {
+        TradingHistory tradingHistory = bill.sell(percent, time, price);
+        histories.add(tradingHistory);
+        this.remainderMoney = this.remainderMoney.add(tradingHistory.getSellPrice().multiply(new BigDecimal(tradingHistory.getSellCount())));
+        LOGGER.debug("sell {} by price {} count {}, earn {}", tradingHistory.getStockId(), this.numberFormat.format(tradingHistory.getSellPrice()), tradingHistory.getSellCount(), tradingHistory.getEarnMoney());
+    }
+
+    /**
+     * 卖出某个股票
+     *
+     * @param price   价格
+     * @param percent 百分比
+     * @param time    时间
+     * @param bill    股票
+     */
+    public void sellBill(BigDecimal price, BigDecimal percent, String time, Bill bill) {
+        if (this.bills.contains(bill)) {
+            sellBillInner(price, percent, time, bill);
+            if (bill.isEmpty()) {
+                this.bills.remove(bill);
+            }
+        } else {
+            LOGGER.error("this account not contains this bill");
+        }
+    }
+
 
     public BigDecimal getRemainderMoney() {
         return remainderMoney;
@@ -122,8 +146,12 @@ public class AccountMoney {
      *
      * @return 是，没
      */
-    private Boolean hasBill() {
+    public Boolean hasBill() {
         return !bills.isEmpty();
+    }
+
+    public List<Bill> getBills() {
+        return new ArrayList<>(bills);
     }
 
     private void clearEmptyBill() {
@@ -135,5 +163,9 @@ public class AccountMoney {
                 }
             }
         }
+    }
+
+    public List<TradingHistory> getHistories() {
+        return new ArrayList<>(histories);
     }
 }

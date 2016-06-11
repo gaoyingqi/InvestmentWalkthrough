@@ -86,4 +86,17 @@ public class TradingHistory {
     public BigDecimal getEarnMoney() {
         return sellPrice.subtract(buyPrice).multiply(new BigDecimal(sellCount));
     }
+
+    @Override
+    public String toString() {
+        return "TradingHistory{" +
+                "stockId='" + stockId + '\'' +
+                ", buyPrice=" + buyPrice +
+                ", buyTime='" + buyTime + '\'' +
+                ", sellCount=" + sellCount +
+                ", sellPrice=" + sellPrice +
+                ", sellTime='" + sellTime + '\'' +
+                ", earn='" + getEarnMoney() + '\'' +
+                '}';
+    }
 }

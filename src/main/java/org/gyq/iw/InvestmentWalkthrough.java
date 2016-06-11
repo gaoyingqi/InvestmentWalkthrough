@@ -1,6 +1,9 @@
 package org.gyq.iw;
 
 import org.gyq.iw.account.AccountMoney;
+import org.gyq.iw.account.Bill;
+import org.gyq.iw.account.TradingHistory;
+import org.gyq.iw.util.BigDecimalUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +23,9 @@ public class InvestmentWalkthrough {
 
     private static final BigDecimal initialMoney = new BigDecimal(100000000);
 
-    private static String filePath = "E:\\百度云同步盘\\Dropbox\\上证指数.csv";
+    private static String filePath = "E:\\百度云同步盘\\Dropbox\\zb002001.csv";
+
+    private static String stockId = "zb002001";
 
     public static void main(String[] args) {
         List<OneLine> lineList = new ArrayList<OneLine>(10000);
@@ -64,6 +69,10 @@ public class InvestmentWalkthrough {
             }
         }
 
+        walkthrough(lineList, money);
+    }
+
+    private static void walkthrough(List<OneLine> lineList, AccountMoney money) {
         for (int i = 1; i < lineList.size(); i++) {
             OneLine line = lineList.get(i);
             List<OneLine> subList = Collections.emptyList();
@@ -79,15 +88,15 @@ public class InvestmentWalkthrough {
                         }
                     }
                     if (buy) {
-                        boolean b = money.buy(line.getPrice(), line.getDate(), "1", new BigDecimal(1));
+                        boolean b = money.buy(line.getPrice(), line.getDate(), stockId, new BigDecimal(1));
                         LOGGER.info("want buy {}  by price {} and {}", line.getDate(), line.getPrice(), b ? "success" : "fail");
                     }
                 }
             }
-            if (line.getClose_upper_sell_flag()) {
-                boolean b = money.sell(line.getPrice(), new BigDecimal(0.5), line.getDate());
-                LOGGER.info("want sell {} 50% by price {} and {} ", line.getDate(), line.getPrice(), b ? "success" : "fail");
-            }
+//            if (line.getClose_upper_sell_flag()) {
+//                boolean b = money.sell(line.getPrice(), new BigDecimal(0.5), line.getDate());
+//                LOGGER.info("want sell {} 50% by price {} and {} ", line.getDate(), line.getPrice(), b ? "success" : "fail");
+//            }
             if (line.getDiff_sell_flag()) {
                 boolean sell = false;
                 if (!subList.isEmpty()) {
@@ -98,8 +107,11 @@ public class InvestmentWalkthrough {
                     }
                     if (sell) {
                         boolean b = money.sell(line.getPrice(), line.getDate());
-                        LOGGER.info("want sell {} 100% by price {} and ", line.getDate(), line.getPrice(), b ? "success" : "fail");
+                        LOGGER.info("want sell {} 100% by price {} and {}", line.getDate(), line.getPrice(), b ? "success" : "fail");
                     }
+                }
+                if (!sell) {
+                    sellByDeficit(line.getPrice(), line.getDate(), money);
                 }
             }
         }
@@ -107,6 +119,35 @@ public class InvestmentWalkthrough {
         money.sell(last.getPrice(), last.getDate());
         LOGGER.info("want sell {} 100% by price {}", last.getDate(), last.getPrice());
 
+
+        for (TradingHistory tradingHistory : money.getHistories()) {
+            LOGGER.info(tradingHistory.toString());
+
+        }
         LOGGER.info("initialMoney {} ,now money {} ,up {}", initialMoney.toPlainString(), money.getRemainderMoney().toPlainString(), money.getRemainderMoney().divide(initialMoney, BigDecimal.ROUND_CEILING));
+    }
+
+    public static void sellByEarn(BigDecimal currentPrice, String time, AccountMoney money) {
+        if (money.hasBill()) {
+            List<Bill> bills = money.getBills();
+            for (Bill bill : bills) {
+                if (BigDecimalUtil.greaterThan(currentPrice, bill.getBuyPrice())) {
+                    money.sellBill(currentPrice, new BigDecimal(1), time, bill);
+                    LOGGER.info("want sell {} 100% by price {} and {}", time, currentPrice, "success");
+                }
+            }
+        }
+    }
+
+    public static void sellByDeficit(BigDecimal currentPrice, String time, AccountMoney money) {
+        if (money.hasBill()) {
+            List<Bill> bills = money.getBills();
+            for (Bill bill : bills) {
+                if (BigDecimalUtil.lessThan(currentPrice, bill.getBuyPrice())) {
+                    money.sellBill(currentPrice, new BigDecimal(1), time, bill);
+                    LOGGER.info("want sell {} 100% by price {} and {}", time, currentPrice, "success");
+                }
+            }
+        }
     }
 }

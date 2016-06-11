@@ -73,4 +73,20 @@ public class Bill {
     public boolean isEmpty() {
         return isEmpty;
     }
+
+    public String getStockId() {
+        return stockId;
+    }
+
+    public BigDecimal getBuyPrice() {
+        return buyPrice;
+    }
+
+    public String getBuyTime() {
+        return buyTime;
+    }
+
+    public int getCount() {
+        return count;
+    }
 }

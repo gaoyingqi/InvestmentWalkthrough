@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 /**
  * Created by gyq on 2016/6/5.
  */
-class OneLine {
+public class OneLine {
 
     private String date;
     private String zhiShu;
