@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -17,7 +18,9 @@ import java.util.List;
 public class InvestmentWalkthrough {
     private static final Logger LOGGER = LoggerFactory.getLogger("main");
 
-    private static String filePath = "C:\\Users\\gyq\\Desktop\\上证指数.csv";
+    private static final BigDecimal initialMoney = new BigDecimal(100000000);
+
+    private static String filePath = "E:\\百度云同步盘\\Dropbox\\上证指数.csv";
 
     public static void main(String[] args) {
         List<OneLine> lineList = new ArrayList<OneLine>(10000);
@@ -39,7 +42,7 @@ public class InvestmentWalkthrough {
         }
         LOGGER.info("read lines " + lineList.size());
 
-        AccountMoney money = new AccountMoney(new BigDecimal(10000), "ltt");
+        AccountMoney money = new AccountMoney(initialMoney, "ltt");
         for (int i = 1; i < lineList.size(); i++) {
             OneLine up = lineList.get(i - 1);
             OneLine line = lineList.get(i);
@@ -52,7 +55,7 @@ public class InvestmentWalkthrough {
                 line.setDiff_sell_flag(true);
             }
             // close_upper + > -
-            if (up.getClose_upper().compareTo(new BigDecimal(0)) == 1 && line.getDiff_dea().compareTo(new BigDecimal(0)) == -1) {
+            if (up.getClose_upper().compareTo(new BigDecimal(0)) == 1 && line.getClose_upper().compareTo(new BigDecimal(0)) == -1) {
                 line.setClose_upper_sell_flag(true);
             }
             // close_upper + > -
@@ -63,28 +66,47 @@ public class InvestmentWalkthrough {
 
         for (int i = 1; i < lineList.size(); i++) {
             OneLine line = lineList.get(i);
+            List<OneLine> subList = Collections.emptyList();
+            if (i - 6 >= 0) {
+                subList = lineList.subList(i - 5, i);
+            }
             if (line.getDiff_buy_flag()) {
                 boolean buy = false;
-                if (i - 6 >= 0) {
-                    List<OneLine> subList = lineList.subList(i - 5, i);
+                if (!subList.isEmpty()) {
                     for (OneLine upLine : subList) {
                         if (upLine.getClose_lower_buy_flag()) {
                             buy = true;
                         }
                     }
                     if (buy) {
-                        if (money.buy(line.getPrice())) {
-                            LOGGER.info("line {}  buy date {}  buy price {}", i, line.getDate(), line.getPrice());
-                        }
+                        boolean b = money.buy(line.getPrice(), line.getDate(), "1", new BigDecimal(1));
+                        LOGGER.info("want buy {}  by price {} and {}", line.getDate(), line.getPrice(), b ? "success" : "fail");
                     }
                 }
             }
+            if (line.getClose_upper_sell_flag()) {
+                boolean b = money.sell(line.getPrice(), new BigDecimal(0.5), line.getDate());
+                LOGGER.info("want sell {} 50% by price {} and {} ", line.getDate(), line.getPrice(), b ? "success" : "fail");
+            }
             if (line.getDiff_sell_flag()) {
-                if (money.sell(line.getPrice())) {
-                    LOGGER.info("line {}  sell date sell price {}", i, line.getDate(), line.getPrice());
+                boolean sell = false;
+                if (!subList.isEmpty()) {
+                    for (OneLine upLine : subList) {
+                        if (upLine.getClose_upper_sell_flag()) {
+                            sell = true;
+                        }
+                    }
+                    if (sell) {
+                        boolean b = money.sell(line.getPrice(), line.getDate());
+                        LOGGER.info("want sell {} 100% by price {} and ", line.getDate(), line.getPrice(), b ? "success" : "fail");
+                    }
                 }
             }
         }
-        LOGGER.info("has money " + money.getMoney().toPlainString());
+        OneLine last = lineList.get(lineList.size() - 1);
+        money.sell(last.getPrice(), last.getDate());
+        LOGGER.info("want sell {} 100% by price {}", last.getDate(), last.getPrice());
+
+        LOGGER.info("initialMoney {} ,now money {} ,up {}", initialMoney.toPlainString(), money.getRemainderMoney().toPlainString(), money.getRemainderMoney().divide(initialMoney, BigDecimal.ROUND_CEILING));
     }
 }

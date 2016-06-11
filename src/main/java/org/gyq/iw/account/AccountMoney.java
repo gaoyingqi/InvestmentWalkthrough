@@ -6,6 +6,11 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * 一个金融账户
@@ -13,16 +18,15 @@ import java.text.NumberFormat;
  */
 public class AccountMoney {
     private static final Logger LOGGER = LoggerFactory.getLogger(AccountMoney.class.getName());
-    private BigDecimal money;
-    private BigDecimal lastBuyMoney;
-    private BigDecimal lastSellMoney;
-    private boolean canBuy = true;
+    private BigDecimal remainderMoney;
     private String accountId;
     private NumberFormat numberFormat = NumberFormat.getNumberInstance();
 
+    private List<Bill> bills = new ArrayList<>(10);
+    private List<TradingHistory> histories = new ArrayList<>(100);
 
     public AccountMoney(BigDecimal money, String accountId) {
-        this.money = money.setScale(2, BigDecimal.ROUND_CEILING);
+        this.remainderMoney = money.setScale(4, BigDecimal.ROUND_CEILING);
         this.accountId = accountId;
         numberFormat.setMinimumFractionDigits(0);//设置小数点后面允许多少位
         numberFormat.setGroupingUsed(true);//设置分组如：,
@@ -31,15 +35,32 @@ public class AccountMoney {
     /**
      * 全部买入某个价格
      *
-     * @param price
+     * @param price   买入价格
+     * @param time    买入时间
+     * @param stockId 股票id
+     * @param percent 闲鱼资金百分比
      */
-    public boolean buy(BigDecimal price) {
-        if (canBuy) {
-            lastBuyMoney = price;
-            lastSellMoney = null;
-            canBuy = false;
-            LOGGER.debug("{} buy by price {}", accountId, price.toPlainString());
-            return true;
+    public boolean buy(BigDecimal price, String time, String stockId, BigDecimal percent) {
+        requireNonNull(price);
+        requireNonNull(time);
+        requireNonNull(stockId);
+        requireNonNull(percent);
+        if (BigDecimalUtil.lessThan(percent, 0) && BigDecimalUtil.greaterThan(percent, 1)) {
+            throw new IllegalArgumentException("percent need [0-1]");
+        }
+        if (hasMoney()) {
+            BigDecimal buyMoney = remainderMoney.multiply(percent);
+            int count = BigDecimalUtil.divide(buyMoney, price).intValue();
+            if (count > 0) {
+                Bill bill = new Bill(price, count, time, stockId);
+                bills.add(bill);
+                this.remainderMoney = this.remainderMoney.subtract(price.multiply(new BigDecimal(count)));
+                LOGGER.debug("success buy by price {} with remainderMoney {} count {}", numberFormat.format(price), numberFormat.format(price.multiply(new BigDecimal(count))), count);
+                return true;
+            } else {
+                LOGGER.debug("want to buy by price , but remain remainderMoney {}", remainderMoney);
+                return false;
+            }
         } else {
             LOGGER.debug("{} if full , by price {}", accountId, price.toPlainString());
             return false;
@@ -51,17 +72,8 @@ public class AccountMoney {
      *
      * @param price
      */
-    public boolean sell(BigDecimal price) {
-        if (canBuy) {
-            LOGGER.debug("{} if empty , by price {}", accountId, price.toPlainString());
-            return false;
-        } else {
-            lastSellMoney = price;
-            canBuy = true;
-            LOGGER.debug("{} sell by price {}", accountId, price.toPlainString());
-            calculatingRevenue();
-            return true;
-        }
+    public boolean sell(BigDecimal price, String time) {
+        return this.sell(price, new BigDecimal(1), time);
     }
 
     /**
@@ -70,33 +82,58 @@ public class AccountMoney {
      * @param price   卖出价格
      * @param percent 卖出百分比，相对于账户持有股票金额   （0,1]
      */
-    public boolean sell(BigDecimal price, BigDecimal percent) {
-        if (percent == null || BigDecimalUtil.lessThan(percent, 0) || BigDecimalUtil.greaterThan(percent, 1)) {
+    public boolean sell(BigDecimal price, BigDecimal percent, String time) {
+
+        requireNonNull(price);
+        requireNonNull(percent);
+        requireNonNull(time);
+
+        if (BigDecimalUtil.lessThan(percent, 0) || BigDecimalUtil.greaterThan(percent, 1)) {
             throw new IllegalArgumentException("percent must be in (0,1]");
         }
-        if (canBuy) {
-            LOGGER.debug("{} if empty , by price {}", accountId, price.toPlainString());
-            return false;
-        } else {
-            lastSellMoney = price;
-            canBuy = true;
-            LOGGER.debug("{} sell by price {}", accountId, price.toPlainString());
-            calculatingRevenue();
+        if (hasBill()) {
+            for (Bill bill : bills) {
+                TradingHistory tradingHistory = bill.sell(percent, time, price);
+                histories.add(tradingHistory);
+                this.remainderMoney = this.remainderMoney.add(tradingHistory.getSellPrice().multiply(new BigDecimal(tradingHistory.getSellCount())));
+                LOGGER.debug("sell {} by price {} count {}, earn remainderMoney {}", tradingHistory.getStockId(), this.numberFormat.format(tradingHistory.getSellPrice()), tradingHistory.getSellCount(), tradingHistory.getEarnMoney());
+            }
+            clearEmptyBill();
             return true;
         }
+        return false;
+    }
+
+    public BigDecimal getRemainderMoney() {
+        return remainderMoney;
     }
 
     /**
-     * 计算收入
+     * 是否有闲余资金
+     *
+     * @return 有，没有
      */
-    private void calculatingRevenue() {
-        BigDecimal growthRate = lastSellMoney.divide(lastBuyMoney, BigDecimal.ROUND_CEILING, 6);
-        BigDecimal multiply = money.multiply(growthRate);
-        LOGGER.info("{} money change from {} to {} growthRate is {} {}", accountId, numberFormat.format(money), numberFormat.format(multiply), numberFormat.format(growthRate.multiply(new BigDecimal(100))), growthRate.doubleValue() > 1);
-        money = multiply;
+    private boolean hasMoney() {
+        return BigDecimalUtil.greaterThan(this.remainderMoney, 0);
     }
 
-    public BigDecimal getMoney() {
-        return money;
+    /**
+     * 是否持仓
+     *
+     * @return 是，没
+     */
+    private Boolean hasBill() {
+        return !bills.isEmpty();
+    }
+
+    private void clearEmptyBill() {
+        if (hasBill()) {
+            for (Iterator<Bill> billIterator = bills.iterator(); billIterator.hasNext(); ) {
+                Bill bill = billIterator.next();
+                if (bill.isEmpty()) {
+                    billIterator.remove();
+                }
+            }
+        }
     }
 }

@@ -26,7 +26,6 @@ public class BigDecimalUtil {
      * @param dividend
      * @param divisor
      * @return
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static BigDecimal divide(BigDecimal dividend, BigDecimal divisor) {
@@ -34,7 +33,7 @@ public class BigDecimalUtil {
         requireNonNull(dividend);
         requireNonNull(divisor);
 
-        return dividend.divide(divisor, 4, RoundingMode.CEILING);
+        return dividend.divide(divisor, 4, RoundingMode.HALF_DOWN);
     }
 
     /**
@@ -44,7 +43,6 @@ public class BigDecimalUtil {
      * @param b an BigDecimal to be compared with {@code a} for equality
      * @return {@code true} if the arguments are equal to each other
      * and {@code false} otherwise
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static boolean equals(BigDecimal a, BigDecimal b) {
@@ -54,10 +52,9 @@ public class BigDecimalUtil {
     /**
      * 比较val是否比threshold大
      *
-     * @param price
+     * @param val
      * @param threshold
      * @return
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static boolean greaterThan(BigDecimal val, double threshold) {
@@ -69,10 +66,9 @@ public class BigDecimalUtil {
     /**
      * 比较val是否比threshold大
      *
-     * @param price
+     * @param val
      * @param threshold
      * @return
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static boolean greaterThan(BigDecimal val, BigDecimal threshold) {
@@ -81,13 +77,41 @@ public class BigDecimalUtil {
         return val.compareTo(threshold) > 0;
     }
 
+
+    /**
+     * 比较val是否比threshold大
+     *
+     * @param val
+     * @param threshold
+     * @return
+     * @since Sep 20, 2015
+     */
+    public static boolean greaterEqualThan(BigDecimal val, double threshold) {
+
+        requireNonNull(val);
+        return val.compareTo(BigDecimal.valueOf(threshold)) >= 0;
+    }
+
+    /**
+     * 比较val是否比threshold大
+     *
+     * @param val
+     * @param threshold
+     * @return
+     * @since Sep 20, 2015
+     */
+    public static boolean greaterEqualThan(BigDecimal val, BigDecimal threshold) {
+
+        requireNonNull(val);
+        return val.compareTo(threshold) >= 0;
+    }
+
     /**
      * 比较val是否比threshold小
      *
-     * @param price
+     * @param val
      * @param threshold
      * @return
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static boolean lessThan(BigDecimal val, double threshold) {
@@ -100,10 +124,9 @@ public class BigDecimalUtil {
     /**
      * 比较val是否比threshold小
      *
-     * @param price
+     * @param val
      * @param threshold
      * @return
-     * @author shenjiang<hzshenjiang@corp.netease.com>
      * @since Sep 20, 2015
      */
     public static boolean lessThan(BigDecimal val, BigDecimal threshold) {
@@ -111,6 +134,36 @@ public class BigDecimalUtil {
         requireNonNull(val);
 
         return val.compareTo(threshold) < 0;
+    }
+
+    /**
+     * 比较val是否比threshold小
+     *
+     * @param val
+     * @param threshold
+     * @return
+     * @since Sep 20, 2015
+     */
+    public static boolean lessEqualThan(BigDecimal val, double threshold) {
+
+        requireNonNull(val);
+
+        return val.compareTo(BigDecimal.valueOf(threshold)) <= 0;
+    }
+
+    /**
+     * 比较val是否比threshold小
+     *
+     * @param val
+     * @param threshold
+     * @return
+     * @since Sep 20, 2015
+     */
+    public static boolean lessEqualThan(BigDecimal val, BigDecimal threshold) {
+
+        requireNonNull(val);
+
+        return val.compareTo(threshold) <= 0;
     }
 
     public static String getStringValue(BigDecimal val, int newScale, int roundingMode) {
